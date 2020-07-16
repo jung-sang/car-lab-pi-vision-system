@@ -26,7 +26,7 @@ Current Software
 - OpenCV (Image manipulation / Object tracking)
 
 Previous Software
-- PIL (Image manipulation)
+- Pillow (PIL) (Image manipulation)
 - dlib (Object tracking)
 
 ----------------------------------------------------------------------------

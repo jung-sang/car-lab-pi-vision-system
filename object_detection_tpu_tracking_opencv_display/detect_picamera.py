@@ -1,3 +1,6 @@
+#NOTE: This code works only for ONE object even though many parts are set up to iterate though many.
+
+
 # python3
 #
 # Copyright 2019 The TensorFlow Authors. All Rights Reserved.
@@ -163,97 +166,111 @@ def main():
   instantaneous_frame_rates = []
   
   # initialize variable for tracker use
-
-  #t = None
-  
   counter = 1
 
   start_time = time.monotonic()
-  time_all = []
   
   t = None
   
+  # begin video stream internally
   vs = VideoStream(usePiCamera=True).start()
+  # wait 1 second to give the camera time to adjust to lighting
   time.sleep(1.0)
   
+  # main loop
   while True:
       
+      # calculating instantaneous FPS
       total_time = (time.monotonic() - start_time)
       start_time = time.monotonic()
-      print("FPS: " + str(1/(total_time)))#/counter)))
-      #print(total_time)
-      #time_all.append(total_time)
-      #print(str(sum(time_all)/len(time_all)) + ", FPS: " + str(1/(sum(time_all)/len(time_all))))
+      print("FPS: " + str(1/(total_time)))
       
+      # Keep track of loop number
       counter += 1
       
+      # get and resize current frame from camera
       frame = vs.read()
       frame = cv2.resize(frame, (input_width, input_height))
       (H, W) = frame.shape[:2]
       
+      # if no tracker exits
       if t == None:
           
-          #cv_rect = (100, 100, 100, 100)
-          
-          #image_detector = cv2.resize(frame,(input_width, input_height))
+          # formating the frame as an RGB image for the TensorFlow detector
           image_detector = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
           
+          # get object detection results from TensorFlow Lite object detection model
           results = detect_objects(interpreter, image_detector, args.threshold)
+          
+          # get coordinates of bounding boxes
           rects = get_rects(results)
+          
+          # loops through results
           for i in np.arange(0,len(results)):
-              #format bounding box coordinates
+              #format bounding box coordinates for OpenCV tracker
               box = np.array(rects[i])
               (startY, startX, endY, endX) = box.astype("int")
               cv_rect = (startX, startY, endX - startX, endY - startY)
-              #print(startX, startY, endX, endY)
               
               #Note on tracker types:
               #KCF: Average speed, Average accuracy
               #MOSSE: High speed, low accuracy
               #MedianFlow: High speed, good accuracy only on slow moving objects (current best)
               
+              # initialize tracker
               t = cv2.TrackerMedianFlow_create()
               t.init(frame, cv_rect)
               
+              # draw bounding box from the detector on frame
               cv2.rectangle(frame, (startX, startY), (endX , endY),(0, 255, 0), 2)
               
               # return active objects from the centroid tracker
               objects = ct.update(rects)
               
+              # display object centroid on screen
               for (objectID, centroid) in objects.items():
                   text = "ID {}".format(objectID)
                   #annotator.text([centroid[0],centroid[1]], text)
                   cv2.putText(frame, text, (centroid[0]-10, centroid[1]-10), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0))
                   cv2.circle(frame, (centroid[0], centroid[1]), 5, (0, 255, 0))
           
-          #cv2.rectangle(frame, (100, 100), (100, 100),(0, 255, 0), 2)
-          
+      # if a tracker has already been set up    
       else:
+          # update the tracker is new frame and get new results
           (success, box) = t.update(frame)
-            
+          
+          # if tracker was successful
           if success:
+              # draw bounding box; box format [xmin, ymin, width, height], cv2.rectangle format [xmin, ymin, xmax, ymax]
               cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[0] + box[2]), int(box [1] + box[3])),(0, 255, 0), 2)
               
+              # update centroud tracker; centroid format [ymin, xmin, ymax, xmax]
+              # TODO: Fix formating!
               objects = ct.update([[int(box[1]), int(box[0]), int(box[1] + box[3]), int(box [0] + box[2])]])
               
+              # draw centorid
               for (objectID, centroid) in objects.items():
                   text = "ID {}".format(objectID)
                   #annotator.text([centroid[0],centroid[1]], text)
                   cv2.putText(frame, text, (centroid[0]-10, centroid[1]-10), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0))
                   cv2.circle(frame, (centroid[0], centroid[1]), 5, (0, 255, 0))
-              
+          
+          # Every n frames the tracker will be erased and the object detector will run again to re-initialize the tracker
+          # n=15 for MedianFlow
           if (counter % 15) == 0:
               t = None
       
+      # resize frame for display
       frame = cv2.resize(frame, (640,480))
       cv2.imshow("Frame", frame)
       key = cv2.waitKey(1) & 0xFF
       
       
-      
+      # key "q" quits main loop
       if key == ord("q"):
           break
-        
+  
+  # once out of main loop program ends
   cv2.destroyAllWindows()
   vs.stop
 
