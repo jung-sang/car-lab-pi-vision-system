@@ -1,0 +1,18 @@
+Object Detection with Coral TPU:
+
+
+change diretory:
+
+	cd Desktop/object_detection/object_detection_tpu_tracking_opencv_display
+
+Install necessary materials to tmp folder:
+
+	bash download.sh /tmp
+
+Run model:
+
+	python3 detect_picamera.py \--model /tmp/mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite \--labels /tmp/coco_labels.txt
+
+Quit task:
+
+	^C
