@@ -174,6 +174,11 @@ def main():
   
   # begin video stream internally
   vs = VideoStream(usePiCamera=True).start()
+  
+  # uncomment next two lines for exporting video
+  # fourcc = cv2.VideoWriter_fourcc(*'XVID')
+  #out = cv2.VideoWriter('output2.avi', fourcc, 30.0, (640,480))
+  
   # wait 1 second to give the camera time to adjust to lighting
   time.sleep(1.0)
   
@@ -262,6 +267,10 @@ def main():
       
       # resize frame for display
       frame = cv2.resize(frame, (640,480))
+      
+      # uncomment next time to export video
+      # out.write(frame)
+      
       cv2.imshow("Frame", frame)
       key = cv2.waitKey(1) & 0xFF
       
