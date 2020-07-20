@@ -129,32 +129,16 @@ def start_tracker(cv_rect, frame, inputQueue, outputQueue):
     t.init(frame, cv_rect)
     
     while True:
-        cv_rect = inputQueue.get()
+        frame = inputQueue.get()
         
-        if cv_rect is not None:
+        if frame is not None:
             (success, box) = t.update(frame)
             # if tracker was successful
-            if success:
-                # draw bounding box; box format [xmin, ymin, width, height], cv2.rectangle format [xmin, ymin, xmax, ymax]
-                cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[0] + box[2]), int(box [1] + box[3])),(0, 255, 0), 2)
+            if success == False:
+                print("IT WAS FALSE!!!!!!")
+            #if success:
+            outputQueue.put((int(box[0]), int(box[1]), int(box[0] + box[2]), int(box [1] + box[3])))
               
-                # update centroud tracker; centroid format [ymin, xmin, ymax, xmax]
-                # TODO: Fix formating!
-                objects = ct.update([[int(box[1]), int(box[0]), int(box[1] + box[3]), int(box [0] + box[2])]])
-              
-                # draw centorid
-                for (objectID, centroid) in objects.items():
-                    text = "ID {}".format(objectID)
-                    #annotator.text([centroid[0],centroid[1]], text)
-                    cv2.putText(frame, text, (centroid[0]-10, centroid[1]-10), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0))
-                    cv2.circle(frame, (centroid[0], centroid[1]), 5, (0, 255, 0))
-          
-            # Every n frames the tracker will be erased and the object detector will run again to re-initialize the tracker
-            # n=15 for MedianFlow
-            # if (counter % 150000) == 0:
-                # t = None
-
-
 def main():
   parser = argparse.ArgumentParser(
       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -244,6 +228,7 @@ def main():
               p = multiprocessing.Process(target = start_tracker, args = (cv_rect, frame, iq, oq))
               p.daemon = True
               p.start()
+              print(p)
               
               #Note on tracker types:
               #KCF: Average speed, Average accuracy
@@ -265,9 +250,18 @@ def main():
                   text = "ID {}".format(objectID)
                   cv2.putText(frame, text, (centroid[0]-10, centroid[1]-10), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0))
                   cv2.circle(frame, (centroid[0], centroid[1]), 5, (0, 255, 0))
+                  
           
-#       # if a tracker has already been set up    
-#       else:
+      # if a tracker has already been set up    
+      else:
+          
+          for iq in inputQueues:
+              iq.put(frame)
+              
+          for oq in outputQueues:
+              (rect1, rect2, rect3, rect4) = oq.get()
+              cv2.rectangle(frame, (rect1, rect2), (rect3, rect4), (0, 255, 0), 2)
+              
 #           # update the tracker is new frame and get new results
 #           (success, box) = t.update(frame)
 #           
@@ -276,7 +270,7 @@ def main():
 #               # draw bounding box; box format [xmin, ymin, width, height], cv2.rectangle format [xmin, ymin, xmax, ymax]
 #               cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[0] + box[2]), int(box [1] + box[3])),(0, 255, 0), 2)
 #               
-#               # update centroud tracker; centroid format [ymin, xmin, ymax, xmax]
+#               # update centroid tracker; centroid format [ymin, xmin, ymax, xmax]
 #               # TODO: Fix formating!
 #               objects = ct.update([[int(box[1]), int(box[0]), int(box[1] + box[3]), int(box [0] + box[2])]])
 #               
