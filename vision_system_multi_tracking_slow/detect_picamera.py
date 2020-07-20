@@ -154,7 +154,7 @@ def main():
       help='Score threshold for detected objects.',
       required=False,
       type=float,
-      default=0.4)
+      default=0.4) # originally 0.4
   args = parser.parse_args()
 
   labels = load_labels(args.labels)
@@ -173,7 +173,8 @@ def main():
   t = []
   
   # begin video stream internally
-  vs = VideoStream(usePiCamera=True).start()
+  ######vs = VideoStream(usePiCamera=True).start()
+  vs = cv2.VideoCapture('/home/pi/Desktop/object_detection/vision_system_multi_tracking_slow/test_video_8.h264')
   
   # uncomment next two lines for exporting video
   # fourcc = cv2.VideoWriter_fourcc(*'XVID')
@@ -183,20 +184,24 @@ def main():
   time.sleep(1.0)
   
   # main loop
-  while True:
+  while True: #(vs.isOpened()):
       
       # calculating instantaneous FPS
-      total_time = (time.monotonic() - start_time)
-      start_time = time.monotonic()
-      print("FPS: " + str(1/(total_time)))
+      #total_time = (time.monotonic() - start_time)
+      #start_time = time.monotonic()
+      #print("FPS: " + str(1/(total_time)))
       
       # Keep track of loop number
       counter += 1
-      
+
       # get and resize current frame from camera
-      frame = vs.read()
+      ret, frame = vs.read()
+      if ret == False:
+          break
       frame = cv2.resize(frame, (input_width, input_height))
       (H, W) = frame.shape[:2]
+      
+     
       
       # if no tracker exits
       if len(t) == 0:
@@ -283,8 +288,8 @@ def main():
   
   # once out of main loop program ends
   cv2.destroyAllWindows()
-  vs.stop
-
+  #vs.stop
+  vs.release
 
 if __name__ == '__main__':
   main()
