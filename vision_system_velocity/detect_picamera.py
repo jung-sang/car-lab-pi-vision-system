@@ -24,6 +24,7 @@ from __future__ import print_function
 from tflite_runtime.interpreter import load_delegate #coral
 
 from centroid_tracker import CentroidTracker
+from velocity import VelocityTracker
 
 
 import argparse
@@ -48,6 +49,7 @@ CAMERA_WIDTH = 300 #int(640/2)
 CAMERA_HEIGHT = 300 #int(480/2)
 
 ct = CentroidTracker()
+v = VelocityTracker()
 
 
 def load_labels(path):
@@ -103,27 +105,6 @@ def detect_objects(interpreter, image, threshold):
   return results
 
 
-def annotate_objects(annotator, results, labels):
-  """Draws the bounding box and label for each object in the results."""
-  for obj in results:
-    
-    # Convert the bounding box figures from relative coordinates
-    # to absolute coordinates based on the original resolution
-    ymin, xmin, ymax, xmax = obj['bounding_box']
-    xmin = int(xmin * CAMERA_WIDTH)
-    xmax = int(xmax * CAMERA_WIDTH)
-    ymin = int(ymin * CAMERA_HEIGHT)
-    ymax = int(ymax * CAMERA_HEIGHT)
-
-    # Overlay the box, label, and score on the camera preview
-    annotator.bounding_box([xmin, ymin, xmax, ymax])
-    annotator.text([xmin, ymin],
-                   '%s\n%.2f' % (labels[obj['class_id']], obj['score']))
-    
-    # Overlay centroid position of each bounding box
-    object_center_x = (xmin + xmax)/2
-    object_center_y = (ymin + ymax)/2
-    annotator.centroid(object_center_x, object_center_y)
     
 def get_rects(results):
     rects = []
@@ -154,7 +135,7 @@ def main():
       help='Score threshold for detected objects.',
       required=False,
       type=float,
-      default=0.4) # originally 0.4
+      default=0.5) # originally 0.4
   args = parser.parse_args()
 
   labels = load_labels(args.labels)
@@ -182,6 +163,7 @@ def main():
   
   # wait 1 second to give the camera time to adjust to lighting
   time.sleep(1.0)
+
   
   # main loop
   while True: #(vs.isOpened()):
@@ -236,42 +218,57 @@ def main():
               # draw bounding box from the detector on frame
               cv2.rectangle(frame, (startX, startY), (endX , endY),(0, 255, 0), 2)
               
-              # return active objects from the centroid tracker
-              objects = ct.update(rects)
-              
-              # display object centroid on screen
-              for (objectID, centroid) in objects.items():
-                  text = "ID {}".format(objectID)
-                  #annotator.text([centroid[0],centroid[1]], text)
-                  cv2.putText(frame, text, (centroid[0]-10, centroid[1]-10), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0))
-                  cv2.circle(frame, (centroid[0], centroid[1]), 5, (0, 255, 0))
+          # return active objects from the centroid tracker
+          #print(objects)
+          objects = ct.update(rects)
           
-      # if a tracker has already been set up    
-      else:
-          for tracker in t:
-              # update the tracker is new frame and get new results
-              (success, box) = tracker.update(frame)
-              
-              # if tracker was successful
-              if success:
-                  # draw bounding box; box format [xmin, ymin, width, height], cv2.rectangle format [xmin, ymin, xmax, ymax]
-                  cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[0] + box[2]), int(box [1] + box[3])),(0, 255, 0), 2)
-                  
-                  # update centroud tracker; centroid format [ymin, xmin, ymax, xmax]
-                  # TODO: Fix formating!
-                  objects = ct.update([[int(box[1]), int(box[0]), int(box[1] + box[3]), int(box [0] + box[2])]])
-                  
-                  # draw centorid
-                  for (objectID, centroid) in objects.items():
-                      text = "ID {}".format(objectID)
-                      #annotator.text([centroid[0],centroid[1]], text)
-                      cv2.putText(frame, text, (centroid[0]-10, centroid[1]-10), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0))
-                      cv2.circle(frame, (centroid[0], centroid[1]), 5, (0, 255, 0))
+          centroid_list = []
           
-          # Every n frames the tracker will be erased and the object detector will run again to re-initialize the tracker
-          # n=15 for MedianFlow
-          if (counter % 15) == 0:
-              t = []
+          for (objectID, centroid) in objects.items():
+              centroid_list.append([objectID, centroid])
+
+          # calculate velocities from centroids
+          # velocities = v.update(centroid_objects, counter)
+          average_direction = v.update(centroid_list, counter)
+          new_direction = list(average_direction)
+          print(new_direction[0])
+
+          
+          cv2.line(frame,(100, 100), (int(100*new_direction[0]), int(100*new_direction[1])), (0, 0, 255), 2)
+              
+          # display object centroid on screen
+          for (objectID, centroid) in objects.items():
+              text = "ID {}".format(objectID)
+              #annotator.text([centroid[0],centroid[1]], text)
+              cv2.putText(frame, text, (centroid[0]-10, centroid[1]-10), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0))
+              cv2.circle(frame, (centroid[0], centroid[1]), 5, (0, 255, 0))
+          
+#       # if a tracker has already been set up    
+#       else:
+#           for tracker in t:
+#               # update the tracker is new frame and get new results
+#               (success, box) = tracker.update(frame)
+#               
+#               # if tracker was successful
+#               if success:
+#                   # draw bounding box; box format [xmin, ymin, width, height], cv2.rectangle format [xmin, ymin, xmax, ymax]
+#                   cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[0] + box[2]), int(box [1] + box[3])),(0, 255, 0), 2)
+#                   
+#                   # update centroud tracker; centroid format [ymin, xmin, ymax, xmax]
+#                   # TODO: Fix formating!
+#                   objects = ct.update([[int(box[1]), int(box[0]), int(box[1] + box[3]), int(box [0] + box[2])]])
+#                   
+#                   # draw centorid
+#                   for (objectID, centroid) in objects.items():
+#                       text = "ID {}".format(objectID)
+#                       #annotator.text([centroid[0],centroid[1]], text)
+#                       cv2.putText(frame, text, (centroid[0]-10, centroid[1]-10), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0))
+#                       cv2.circle(frame, (centroid[0], centroid[1]), 5, (0, 255, 0))
+#           
+#           # Every n frames the tracker will be erased and the object detector will run again to re-initialize the tracker
+#           # n=15 for MedianFlow
+#           if (counter % 15) == 0:
+#               t = []
       
       # resize frame for display
       frame = cv2.resize(frame, (640,480))
