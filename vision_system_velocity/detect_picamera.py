@@ -162,7 +162,7 @@ def main():
   #out = cv2.VideoWriter('output2.avi', fourcc, 30.0, (640,480))
   
   # wait 1 second to give the camera time to adjust to lighting
-  time.sleep(1.0)
+  #time.sleep(1.0) 
 
   
   # main loop
@@ -229,12 +229,19 @@ def main():
 
           # calculate velocities from centroids
           # velocities = v.update(centroid_objects, counter)
-          average_direction = v.update(centroid_list, counter)
-          new_direction = list(average_direction)
-          print(new_direction[0])
+          average_direction = v.update(objects, counter)
+          # print(average_direction)
+          for (objectID, direction), (objectID, centroid) in zip(average_direction.items(), objects.items()):
+              cv2.line(frame,(centroid[0], centroid[1]), (-1*int(centroid[0]+(100*direction[0])), int(centroid[1]+(100*direction[1]))), (0, 0, 255), 2)
+              
+#               
+#           for (objectID, direction) in average_direction.items():
+#               cv2.line(frame,(100, 100), (int(100+(100*direction[0])), int(100+(100*direction[1]))), (0, 0, 255), 2)
+          #new_direction = list(average_direction)
+          #print(new_direction[0])
 
           
-          cv2.line(frame,(100, 100), (int(100*new_direction[0]), int(100*new_direction[1])), (0, 0, 255), 2)
+          #cv2.line(frame,(100, 100), (int(100*new_direction[0]), int(100*new_direction[1])), (0, 0, 255), 2)
               
           # display object centroid on screen
           for (objectID, centroid) in objects.items():

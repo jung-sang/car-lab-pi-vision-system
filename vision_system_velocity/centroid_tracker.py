@@ -65,7 +65,7 @@ class CentroidTracker:
             D = dist.cdist(np.array(objectCentroids), inputCentroids)
             
             # orderes the matix D and gives the indexes the smallest distance between each old centroid to a new centroid
-            # rows would give the current centroid indes and cols would give the centroid index of the nearest centroid
+            # rows would give the current centroid indexes and cols would give the centroid index of the nearest centroid
             rows = D.min(axis=1).argsort()
             cols = D.argmin(axis=1)[rows]
             
