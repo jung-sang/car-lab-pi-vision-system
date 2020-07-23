@@ -224,6 +224,7 @@ def main():
           #print(objects)
           objects = ct.update(rects)
           
+          # TODO: delete three lines below, make this a function, set a varibale for scaling of vector
           centroid_list = []
           
           for (objectID, centroid) in objects.items():
@@ -231,9 +232,10 @@ def main():
 
           # calculate velocities from centroids
           average_direction = v.update(objects)
+          print(objects)
           print(average_direction)
           for (objectID, direction), (objectID, centroid) in zip(average_direction.items(), objects.items()):
-              cv2.line(frame,(centroid[0], centroid[1]), (int(centroid[0]+(10*direction[0])), int(centroid[1]+(10*direction[1]))), (0, 0, 255), 2)
+              cv2.arrowedLine(frame,(centroid[0], centroid[1]), (int(centroid[0]+(25*direction[0])), int(centroid[1]+(25*direction[1]))), (0, 0, 255), 2)
               
 #               
 #           for (objectID, direction) in average_direction.items():
@@ -269,7 +271,7 @@ def main():
                   average_direction = v.update(objects)
                   print(average_direction)
                   for (objectID, direction), (objectID, centroid) in zip(average_direction.items(), objects.items()):
-                      cv2.line(frame,(centroid[0], centroid[1]), (int(centroid[0]+(10*direction[0])), int(centroid[1]+(10*direction[1]))), (0, 0, 255), 2)
+                      cv2.arrowedLine(frame,(centroid[0], centroid[1]), (int(centroid[0]+(25*direction[0])), int(centroid[1]+(25*direction[1]))), (0, 0, 255), 2)
                   
                   
                   # draw centorid

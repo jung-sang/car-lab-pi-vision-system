@@ -31,7 +31,7 @@ class VelocityTracker:
             instantDirection = [new - old for (new, old) in zip(newCentroids, oldCentroids)]
             
             # adding instantDirection to self.instantDirectionDict that keeps a running sum of displacement over the last n (n=10) frames
-            if (len(self.sumDirection) <= i) or ((self.counter % 10) == 0):
+            if (i not in self.sumDirection) or ((self.counter % 50) == 0): #len(self.sumDirection) <= i
                 self.counter = 1
                 self.sumDirection[i] = instantDirection
             else:
