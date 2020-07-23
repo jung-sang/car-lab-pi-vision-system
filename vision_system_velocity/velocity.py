@@ -4,61 +4,47 @@ import math
 
 
 class VelocityTracker:
-    
+
     def __init__ (self):
         self.oldCentroids = []
         self.newCentroids = []
-        self.totalDistance = [[0,0],[0,0],[0,0]]
-        self.average_direction = OrderedDict()
-        self.instantDirectionDict = OrderedDict()
+        self.direction = OrderedDict()
+        self.sumDirection = OrderedDict()
+        self.counter = 0
     
-    def update(self, objects, counter):
-
+    def update(self, objects):
         
+        self.counter += 1
+
+        # separating dictionary components of objects
         objectIDs = list(objects.keys())
-        objectCentroids = list(objects.values())
-        
-        self.oldCentroids = self.newCentroids[:]
+        objectCentroids = list(objects.values())  
+
+        # pulling new (most recent frame) and old (last frame) centroid locations from objects
+        self.oldCentroids = self.newCentroids[:]   
         self.newCentroids = objectCentroids
-        print(self.oldCentroids)
 
+        
         for (oldCentroids, newCentroids, i) in zip(self.oldCentroids, self.newCentroids, objectIDs):
-            instantDirection = []
-            normInstantDirection = []
-            # instantaneous motion direction vector
-            # instantDirection = (newCentroids - oldCentroids)
+            
+            # finding change vector between old and new centroids
             instantDirection = [new - old for (new, old) in zip(newCentroids, oldCentroids)]
-#             print(instantDirection)
-#             instantDirection[1] = 1*instantDirection[1]
-#             print(instantDirection)
-#             
-            # instantaneous norm of motion direction vector
-#             if ((instantDirection[0])**2+(instantDirection[1])**2) != 0:
-#                 normInstantDirection = [instantDirection[0]/(math.sqrt((instantDirection[0])**2+(instantDirection[1])**2)), instantDirection[1]/(math.sqrt((instantDirection[0])**2+(instantDirection[1])**2))]
-#             else:
-#                 normInstantDirection = [0,0]
-
-            normInstantDirection = instantDirection
             
-            #print(normInstantDirection)
-            
-            if len(self.instantDirectionDict) <= i:
-                self.instantDirectionDict[i] = normInstantDirection
-            elif (counter % 10) == 0:
-                self.instantDirectionDict[i] = normInstantDirection
+            # adding instantDirection to self.instantDirectionDict that keeps a running sum of displacement over the last n (n=10) frames
+            if (len(self.sumDirection) <= i) or ((self.counter % 10) == 0):
+                self.counter = 1
+                self.sumDirection[i] = instantDirection
             else:
-                self.instantDirectionDict[i] = sum(normInstantDirection, self.instantDirectionDict[i])
+                self.sumDirection[i] = [inst + instDict for (inst, instDict) in zip(instantDirection, self.sumDirection[i])]             
             
+            # normalizes sum motion direction vector
+            if ((self.sumDirection[i][0])**2+(self.sumDirection[i][1])**2) != 0:
+                sumDirectionNorm = [self.sumDirection[i][0]/(math.sqrt((self.sumDirection[i][0])**2+(self.sumDirection[i][1])**2)), self.sumDirection[i][1]/(math.sqrt((self.sumDirection[i][0])**2+(self.sumDirection[i][1])**2))]
+            else:
+                sumDirectionNorm = [0,0]
             
-            # for (i, direction) in objects.items():
-#             
-#             self.totalDistance[i] = sum (normInstantDirection[i], self.totalDistance[i])
-#             
-#             print(self.totalDistance[i])
+            #place direction norms in dictionary
+            self.direction[i] = sumDirectionNorm            
             
-            self.average_direction[i] = [i/counter for i in self.instantDirectionDict[i]]
-            
-            #print(self.average_direction)
-            
-        return self.average_direction
+        return self.direction
         

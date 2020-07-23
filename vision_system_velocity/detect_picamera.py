@@ -100,7 +100,7 @@ def detect_objects(interpreter, image, threshold):
           'score': scores[i]
       }
       # simplifies program to only add frisbee objects to the results
-      if classes[i]==0.0: # firsbee = 33.0
+      if classes[i]==33.0: # firsbee = 33.0
           results.append(result)
   return results
 
@@ -154,15 +154,15 @@ def main():
   t = []
   
   # begin video stream internally
-  ######vs = VideoStream(usePiCamera=True).start()
-  vs = cv2.VideoCapture('/home/pi/Desktop/object_detection/vision_system_multi_tracking_slow/test_video_11.mp4')
+  vs = VideoStream(usePiCamera=True).start()
+  #vs = cv2.VideoCapture('/home/pi/Desktop/object_detection/vision_system_velocity/test_video_12.mp4')
   
   # uncomment next two lines for exporting video
   # fourcc = cv2.VideoWriter_fourcc(*'XVID')
   #out = cv2.VideoWriter('output2.avi', fourcc, 30.0, (640,480))
   
   # wait 1 second to give the camera time to adjust to lighting
-  #time.sleep(1.0) 
+  time.sleep(1.0) 
 
   
   # main loop
@@ -177,9 +177,11 @@ def main():
       counter += 1
 
       # get and resize current frame from camera
-      ret, frame = vs.read()
-      if ret == False:
-          break
+      #ret,
+      frame = vs.read()
+      #if ret == False:
+      #    print("I am broken")
+       #   break
       frame = cv2.resize(frame, (input_width, input_height))
       (H, W) = frame.shape[:2]
       
@@ -211,9 +213,9 @@ def main():
               #MedianFlow: High speed, good accuracy only on slow moving objects (current best) 
               
               # initialize tracker
-              #tracker = cv2.TrackerMedianFlow_create()
-              #tracker.init(frame, cv_rect)
-              #t.append(tracker)
+              tracker = cv2.TrackerMedianFlow_create()
+              tracker.init(frame, cv_rect)
+              t.append(tracker)
               
               # draw bounding box from the detector on frame
               cv2.rectangle(frame, (startX, startY), (endX , endY),(0, 255, 0), 2)
@@ -228,11 +230,10 @@ def main():
               centroid_list.append([objectID, centroid])
 
           # calculate velocities from centroids
-          # velocities = v.update(centroid_objects, counter)
-          average_direction = v.update(objects, counter)
-          # print(average_direction)
+          average_direction = v.update(objects)
+          print(average_direction)
           for (objectID, direction), (objectID, centroid) in zip(average_direction.items(), objects.items()):
-              cv2.line(frame,(centroid[0], centroid[1]), (-1*int(centroid[0]+(100*direction[0])), int(centroid[1]+(100*direction[1]))), (0, 0, 255), 2)
+              cv2.line(frame,(centroid[0], centroid[1]), (int(centroid[0]+(10*direction[0])), int(centroid[1]+(10*direction[1]))), (0, 0, 255), 2)
               
 #               
 #           for (objectID, direction) in average_direction.items():
@@ -250,35 +251,42 @@ def main():
               cv2.putText(frame, text, (centroid[0]-10, centroid[1]-10), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0))
               cv2.circle(frame, (centroid[0], centroid[1]), 5, (0, 255, 0))
           
-#       # if a tracker has already been set up    
-#       else:
-#           for tracker in t:
-#               # update the tracker is new frame and get new results
-#               (success, box) = tracker.update(frame)
-#               
-#               # if tracker was successful
-#               if success:
-#                   # draw bounding box; box format [xmin, ymin, width, height], cv2.rectangle format [xmin, ymin, xmax, ymax]
-#                   cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[0] + box[2]), int(box [1] + box[3])),(0, 255, 0), 2)
-#                   
-#                   # update centroud tracker; centroid format [ymin, xmin, ymax, xmax]
-#                   # TODO: Fix formating!
-#                   objects = ct.update([[int(box[1]), int(box[0]), int(box[1] + box[3]), int(box [0] + box[2])]])
-#                   
-#                   # draw centorid
-#                   for (objectID, centroid) in objects.items():
-#                       text = "ID {}".format(objectID)
-#                       #annotator.text([centroid[0],centroid[1]], text)
-#                       cv2.putText(frame, text, (centroid[0]-10, centroid[1]-10), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0))
-#                       cv2.circle(frame, (centroid[0], centroid[1]), 5, (0, 255, 0))
-#           
-#           # Every n frames the tracker will be erased and the object detector will run again to re-initialize the tracker
-#           # n=15 for MedianFlow
-#           if (counter % 15) == 0:
-#               t = []
+      # if a tracker has already been set up    
+      else:
+          for tracker in t:
+              # update the tracker is new frame and get new results
+              (success, box) = tracker.update(frame)
+              
+              # if tracker was successful
+              if success:
+                  # draw bounding box; box format [xmin, ymin, width, height], cv2.rectangle format [xmin, ymin, xmax, ymax]
+                  cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[0] + box[2]), int(box [1] + box[3])),(0, 255, 0), 2)
+                  
+                  # update centroud tracker; centroid format [ymin, xmin, ymax, xmax]
+                  # TODO: Fix formating!
+                  objects = ct.update([[int(box[1]), int(box[0]), int(box[1] + box[3]), int(box [0] + box[2])]])
+                  
+                  average_direction = v.update(objects)
+                  print(average_direction)
+                  for (objectID, direction), (objectID, centroid) in zip(average_direction.items(), objects.items()):
+                      cv2.line(frame,(centroid[0], centroid[1]), (int(centroid[0]+(10*direction[0])), int(centroid[1]+(10*direction[1]))), (0, 0, 255), 2)
+                  
+                  
+                  # draw centorid
+                  for (objectID, centroid) in objects.items():
+                      text = "ID {}".format(objectID)
+                      #annotator.text([centroid[0],centroid[1]], text)
+                      cv2.putText(frame, text, (centroid[0]-10, centroid[1]-10), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0))
+                      cv2.circle(frame, (centroid[0], centroid[1]), 5, (0, 255, 0))
+          
+          # Every n frames the tracker will be erased and the object detector will run again to re-initialize the tracker
+          # n=15 for MedianFlow
+          if (counter % 15) == 0:
+              t = []
       
       # resize frame for display
-      frame = cv2.resize(frame, (640,480))
+      #frame = cv2.resize(frame, (640,480))
+      frame = cv2.resize(frame, (600,600))
       
       # uncomment next time to export video
       # out.write(frame)
@@ -293,8 +301,8 @@ def main():
   
   # once out of main loop program ends
   cv2.destroyAllWindows()
-  #vs.stop
-  vs.release
+  vs.stop
+  #vs.release
 
 if __name__ == '__main__':
   main()
