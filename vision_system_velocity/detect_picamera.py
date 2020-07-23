@@ -100,7 +100,7 @@ def detect_objects(interpreter, image, threshold):
           'score': scores[i]
       }
       # simplifies program to only add frisbee objects to the results
-      if classes[i]==33.0: # firsbee = 33.0
+      if classes[i] == 33.0: # firsbee = 33.0
           results.append(result)
   return results
 
@@ -155,7 +155,7 @@ def main():
   
   # begin video stream internally
   vs = VideoStream(usePiCamera=True).start()
-  #vs = cv2.VideoCapture('/home/pi/Desktop/object_detection/vision_system_velocity/test_video_12.mp4')
+  #vs = cv2.VideoCapture('/home/pi/Desktop/object_detection/vision_system_velocity/test_video_14.mp4')
   
   # uncomment next two lines for exporting video
   # fourcc = cv2.VideoWriter_fourcc(*'XVID')
@@ -171,7 +171,7 @@ def main():
       # calculating instantaneous FPS
       total_time = (time.monotonic() - start_time)
       start_time = time.monotonic()
-      print("FPS: " + str(1/(total_time)))
+      #print("FPS: " + str(1/(total_time)))
       
       # Keep track of loop number
       counter += 1
@@ -180,8 +180,7 @@ def main():
       #ret,
       frame = vs.read()
       #if ret == False:
-      #    print("I am broken")
-       #   break
+      #    break
       frame = cv2.resize(frame, (input_width, input_height))
       (H, W) = frame.shape[:2]
       
@@ -189,13 +188,12 @@ def main():
       
       # if no tracker exits
       if len(t) == 0:
-          
           # formating the frame as an RGB image for the TensorFlow detector
           image_detector = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
           
           # get object detection results from TensorFlow Lite object detection model
           results = detect_objects(interpreter, image_detector, args.threshold)
-          
+
           # get coordinates of bounding boxes
           rects = get_rects(results)
           
@@ -231,11 +229,13 @@ def main():
               centroid_list.append([objectID, centroid])
 
           # calculate velocities from centroids
-          average_direction = v.update(objects)
-          print(objects)
-          print(average_direction)
+          average_direction, pixelRate = v.update(objects)
+          
+          pixelRateSec = (pixelRate * (1/(total_time)))/2
+          print(pixelRateSec)
+          
           for (objectID, direction), (objectID, centroid) in zip(average_direction.items(), objects.items()):
-              cv2.arrowedLine(frame,(centroid[0], centroid[1]), (int(centroid[0]+(25*direction[0])), int(centroid[1]+(25*direction[1]))), (0, 0, 255), 2)
+              cv2.arrowedLine(frame,(centroid[0], centroid[1]), (int(centroid[0]+(pixelRateSec*direction[0])), int(centroid[1]+(pixelRateSec*direction[1]))), (0, 0, 255), 2)
               
 #               
 #           for (objectID, direction) in average_direction.items():
@@ -268,10 +268,13 @@ def main():
                   # TODO: Fix formating!
                   objects = ct.update([[int(box[1]), int(box[0]), int(box[1] + box[3]), int(box [0] + box[2])]])
                   
-                  average_direction = v.update(objects)
-                  print(average_direction)
+                  average_direction, pixelRate = v.update(objects)
+                  
+                  pixelRateSec = (pixelRate * (1/(total_time)))/2
+                  print(pixelRateSec)
+                  
                   for (objectID, direction), (objectID, centroid) in zip(average_direction.items(), objects.items()):
-                      cv2.arrowedLine(frame,(centroid[0], centroid[1]), (int(centroid[0]+(25*direction[0])), int(centroid[1]+(25*direction[1]))), (0, 0, 255), 2)
+                      cv2.arrowedLine(frame,(centroid[0], centroid[1]), (int(centroid[0]+(pixelRateSec*direction[0])), int(centroid[1]+(pixelRateSec*direction[1]))), (0, 0, 255), 2)
                   
                   
                   # draw centorid
