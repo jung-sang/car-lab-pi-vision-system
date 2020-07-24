@@ -1,6 +1,3 @@
-#NOTE: This code works only for ONE object even though many parts are set up to iterate though many.
-
-
 # python3
 #
 # Copyright 2019 The TensorFlow Authors. All Rights Reserved.
@@ -122,6 +119,25 @@ def get_rects(results):
         
     return rects
 
+def draw_centroids(objects, frame):
+    # display object centroid on screen
+    for (objectID, centroid) in objects.items():
+        text = "ID {}".format(objectID)
+        #annotator.text([centroid[0],centroid[1]], text)
+        cv2.putText(frame, text, (centroid[0]-10, centroid[1]-10), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0))
+        cv2.circle(frame, (centroid[0], centroid[1]), 5, (0, 255, 0))
+        
+def draw_vel_vector(objects, frame, total_time):
+      # calculate velocities from centroids
+      average_direction, pixelRate = v.update(objects)
+      
+      pixelRateSec = (pixelRate * (1/(total_time)))/2
+      vectorScale = pixelRate * 10
+      
+      for (objectID, direction), (objectID, centroid) in zip(average_direction.items(), objects.items()):
+          cv2.arrowedLine(frame,(centroid[0], centroid[1]), (int(centroid[0]+(vectorScale*direction[0])), int(centroid[1]+(vectorScale*direction[1]))), (0, 0, 255), 2)
+ 
+
 
 def main():
   parser = argparse.ArgumentParser(
@@ -171,7 +187,7 @@ def main():
       # calculating instantaneous FPS
       total_time = (time.monotonic() - start_time)
       start_time = time.monotonic()
-      #print("FPS: " + str(1/(total_time)))
+      print("FPS: " + str(1/(total_time)))
       
       # Keep track of loop number
       counter += 1
@@ -222,36 +238,9 @@ def main():
           #print(objects)
           objects = ct.update(rects)
           
-          # TODO: delete three lines below, make this a function, set a varibale for scaling of vector
-          centroid_list = []
-          
-          for (objectID, centroid) in objects.items():
-              centroid_list.append([objectID, centroid])
-
-          # calculate velocities from centroids
-          average_direction, pixelRate = v.update(objects)
-          
-          pixelRateSec = (pixelRate * (1/(total_time)))/2
-          print(pixelRateSec)
-          
-          for (objectID, direction), (objectID, centroid) in zip(average_direction.items(), objects.items()):
-              cv2.arrowedLine(frame,(centroid[0], centroid[1]), (int(centroid[0]+(pixelRateSec*direction[0])), int(centroid[1]+(pixelRateSec*direction[1]))), (0, 0, 255), 2)
-              
-#               
-#           for (objectID, direction) in average_direction.items():
-#               cv2.line(frame,(100, 100), (int(100+(100*direction[0])), int(100+(100*direction[1]))), (0, 0, 255), 2)
-          #new_direction = list(average_direction)
-          #print(new_direction[0])
-
-          
-          #cv2.line(frame,(100, 100), (int(100*new_direction[0]), int(100*new_direction[1])), (0, 0, 255), 2)
-              
-          # display object centroid on screen
-          for (objectID, centroid) in objects.items():
-              text = "ID {}".format(objectID)
-              #annotator.text([centroid[0],centroid[1]], text)
-              cv2.putText(frame, text, (centroid[0]-10, centroid[1]-10), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0))
-              cv2.circle(frame, (centroid[0], centroid[1]), 5, (0, 255, 0))
+          draw_vel_vector(objects, frame, total_time)
+         
+          draw_centroids(objects, frame)
           
       # if a tracker has already been set up    
       else:
@@ -268,21 +257,9 @@ def main():
                   # TODO: Fix formating!
                   objects = ct.update([[int(box[1]), int(box[0]), int(box[1] + box[3]), int(box [0] + box[2])]])
                   
-                  average_direction, pixelRate = v.update(objects)
-                  
-                  pixelRateSec = (pixelRate * (1/(total_time)))/2
-                  print(pixelRateSec)
-                  
-                  for (objectID, direction), (objectID, centroid) in zip(average_direction.items(), objects.items()):
-                      cv2.arrowedLine(frame,(centroid[0], centroid[1]), (int(centroid[0]+(pixelRateSec*direction[0])), int(centroid[1]+(pixelRateSec*direction[1]))), (0, 0, 255), 2)
-                  
-                  
-                  # draw centorid
-                  for (objectID, centroid) in objects.items():
-                      text = "ID {}".format(objectID)
-                      #annotator.text([centroid[0],centroid[1]], text)
-                      cv2.putText(frame, text, (centroid[0]-10, centroid[1]-10), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0))
-                      cv2.circle(frame, (centroid[0], centroid[1]), 5, (0, 255, 0))
+                  draw_vel_vector(objects, frame, total_time)
+
+                  draw_centroids(objects, frame)
           
           # Every n frames the tracker will be erased and the object detector will run again to re-initialize the tracker
           # n=15 for MedianFlow
@@ -290,15 +267,13 @@ def main():
               t = []
       
       # resize frame for display
-      #frame = cv2.resize(frame, (640,480))
-      frame = cv2.resize(frame, (600,600))
+      frame = cv2.resize(frame, (600,600)) #(640,480)
       
       # uncomment next time to export video
       # out.write(frame)
       
       cv2.imshow("Frame", frame)
       key = cv2.waitKey(1) & 0xFF
-      
       
       # key "q" quits main loop
       if key == ord("q"):
